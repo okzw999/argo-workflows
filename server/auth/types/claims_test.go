@@ -239,8 +239,34 @@ func TestGetUserInfoGroups(t *testing.T) {
 		httpClient = &HttpClientMock{StatusCode: 200, Body: body}
 
 		claims := &Claims{}
-		groups, err := claims.GetUserInfoGroups(httpClient, "Bearer fake", "https://fake.okta.com", "/user-info")
+		groups, err := claims.GetUserInfoGroups(httpClient, "Bearer fake", "https://fake.okta.com", "/user-info", "")
 		assert.Equal(t, []string{"Everyone"}, groups)
 		require.NoError(t, err)
+	})
+
+	t.Run("CustomGroupNameSet", func(t *testing.T) {
+		mockResponse := `{"ad_groups": ["group1", "group2"]}`
+		body := io.NopCloser(bytes.NewReader([]byte(mockResponse)))
+
+		httpClient := &HttpClientMock{StatusCode: 200, Body: body}
+
+		claims := &Claims{}
+		groups, err := claims.GetUserInfoGroups(httpClient, "Bearer fake", "https://fake.okta.com", "/userinfo", "ad_groups")
+
+		assert.Equal(t, []string{"group1", "group2"}, groups)
+		require.NoError(t, err)
+	})
+
+	t.Run("InvalidCustomGroup", func(t *testing.T) {
+		mockResponse := `{"ad_groups": "not-an-array"}`
+		body := io.NopCloser(bytes.NewReader([]byte(mockResponse)))
+
+		httpClient := &HttpClientMock{StatusCode: 200, Body: body}
+
+		claims := &Claims{}
+		groups, err := claims.GetUserInfoGroups(httpClient, "Bearer fake", "https://fake.okta.com", "/userinfo", "ad_groups")
+
+		require.Error(t, err)
+		assert.Nil(t, groups)
 	})
 }
